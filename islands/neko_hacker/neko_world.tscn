@@ -1,13 +1,14 @@
-[gd_scene load_steps=30 format=3 uid="uid://d17ng66g5ru6y"]
+[gd_scene load_steps=33 format=3 uid="uid://d17ng66g5ru6y"]
 
 [ext_resource type="PackedScene" uid="uid://dbmoi5f76yo36" path="res://shared/player.tscn" id="1_7j1kp"]
 [ext_resource type="AudioStream" uid="uid://dprqvi6emadk8" path="res://addons/contrib/happydiamo_nekohacker_phase_1.mp3" id="1_m4ln8"]
 [ext_resource type="Texture2D" uid="uid://ba4plgu5qrcg2" path="res://shared/sky/neko/spacescape.exr" id="2_2f2xg"]
 [ext_resource type="PackedScene" uid="uid://igunt2eyo7yq" path="res://shared/npc/npc_character.tscn" id="2_sy3b2"]
 [ext_resource type="Script" path="res://follow_camera.gd" id="4_ggigq"]
-[ext_resource type="Script" path="res://islands/neko_hacker/npc_nanahira.gd" id="5_ibjt2"]
 [ext_resource type="ArrayMesh" uid="uid://b2eq4qgyyxe28" path="res://islands/neko_hacker/microphone.obj" id="5_ilkbb"]
 [ext_resource type="PackedScene" uid="uid://c5r668vdr1t38" path="res://islands/neko_hacker/concert_stage.tscn" id="5_jd887"]
+[ext_resource type="Script" path="res://shared/npc/npc_holding.gd" id="5_o8wuw"]
+[ext_resource type="ArrayMesh" uid="uid://c2m4e46t20hdc" path="res://islands/neko_hacker/guitar.obj" id="6_05cld"]
 [ext_resource type="PackedScene" uid="uid://w2nb3hku11pg" path="res://ui/ui.tscn" id="7_47jc1"]
 [ext_resource type="Shader" path="res://shaders/paper_material.gdshader" id="7_x6s04"]
 [ext_resource type="Texture2D" uid="uid://bkbgyrqdfaeer" path="res://shaders/res/paper_0026_color_4k.jpg" id="8_824jw"]
@@ -17,6 +18,7 @@
 [ext_resource type="PackedScene" uid="uid://bimaorkxlb84v" path="res://shared/quickwarp/quickwarp.tscn" id="11_j6tda"]
 [ext_resource type="PackedScene" uid="uid://byaqj8ky2wbph" path="res://islands/neko_hacker/audience_npc.tscn" id="12_hr6tu"]
 [ext_resource type="Script" path="res://islands/neko_hacker/audience_spawner.gd" id="13_co2uf"]
+[ext_resource type="Script" path="res://islands/neko_hacker/assign_viewport_texture.tres.gd" id="15_0f3xu"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_gjsti"]
 panorama = ExtResource("2_2f2xg")
@@ -36,6 +38,60 @@ ssao_enabled = true
 ssao_intensity = 3.0
 ssao_power = 2.0
 ssao_detail = 2.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bqoi8"]
+render_priority = 0
+shader = ExtResource("7_x6s04")
+shader_parameter/paper_color = Color(0.541176, 0.835294, 0.972549, 1)
+shader_parameter/paper_color_both_sides = null
+shader_parameter/point_size = 1.0
+shader_parameter/roughness = 1.0
+shader_parameter/metallic_texture_channel = null
+shader_parameter/specular = 0.05
+shader_parameter/normal_scale = 0.6
+shader_parameter/uv1_scale = Vector3(1, 1, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+shader_parameter/uv2_scale = Vector3(1, 1, 1)
+shader_parameter/uv2_offset = Vector3(0, 0, 0)
+shader_parameter/texture_albedo = ExtResource("8_824jw")
+shader_parameter/texture_roughness = ExtResource("10_16tpb")
+shader_parameter/texture_normal = ExtResource("9_w4ddl")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2yhex"]
+render_priority = 0
+shader = ExtResource("7_x6s04")
+shader_parameter/paper_color = Color(0.847059, 0.776471, 0.686275, 1)
+shader_parameter/paper_color_both_sides = null
+shader_parameter/point_size = 1.0
+shader_parameter/roughness = 1.0
+shader_parameter/metallic_texture_channel = null
+shader_parameter/specular = 0.05
+shader_parameter/normal_scale = 0.6
+shader_parameter/uv1_scale = Vector3(1, 1, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+shader_parameter/uv2_scale = Vector3(1, 1, 1)
+shader_parameter/uv2_offset = Vector3(0, 0, 0)
+shader_parameter/texture_albedo = ExtResource("8_824jw")
+shader_parameter/texture_roughness = ExtResource("10_16tpb")
+shader_parameter/texture_normal = ExtResource("9_w4ddl")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_fphcx"]
+render_priority = 0
+shader = ExtResource("7_x6s04")
+shader_parameter/paper_color = Color(0.00784314, 0.0901961, 0.129412, 1)
+shader_parameter/paper_color_both_sides = null
+shader_parameter/point_size = 1.0
+shader_parameter/roughness = 1.0
+shader_parameter/metallic_texture_channel = null
+shader_parameter/specular = 0.05
+shader_parameter/normal_scale = 0.6
+shader_parameter/uv1_scale = Vector3(1, 1, 1)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+shader_parameter/uv2_scale = Vector3(1, 1, 1)
+shader_parameter/uv2_offset = Vector3(0, 0, 0)
+shader_parameter/texture_albedo = ExtResource("8_824jw")
+shader_parameter/texture_roughness = ExtResource("10_16tpb")
+shader_parameter/texture_normal = ExtResource("9_w4ddl")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_otvg6"]
 render_priority = 0
@@ -82,37 +138,19 @@ size = Vector2(1.44, 0.81)
 [sub_resource type="Shader" id="Shader_rga8c"]
 code = "shader_type spatial;
 render_mode blend_mix,depth_draw_opaque,cull_back,diffuse_burley,specular_schlick_ggx;
-uniform sampler2D texture_emission : source_color, hint_default_black,filter_linear_mipmap,repeat_enable;
+uniform sampler2D viewport : source_color, hint_default_black,filter_linear_mipmap,repeat_enable;
 
 void fragment() {
 	vec2 base_uv = UV;
 	ALBEDO = vec3(0);
-	vec3 emission_tex = texture(texture_emission,base_uv).rgb;
+	vec3 emission_tex = texture(viewport,base_uv).rgb;
 	EMISSION = emission_tex;
 }
 "
 
-[sub_resource type="ImageTexture" id="ImageTexture_w4s7w"]
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_748fg"]
 render_priority = 0
 shader = SubResource("Shader_rga8c")
-shader_parameter/texture_emission = SubResource("ImageTexture_w4s7w")
-
-[sub_resource type="GDScript" id="GDScript_g545r"]
-script/source = "extends CSGMesh3D
-
-var setup = false
-
-# Called when the node enters the scene tree for the first time.
-func _ready():
-	var m = material.duplicate()
-	m.set_shader_parameter(\"texture_emission\", get_viewport().get_texture())
-	material_override = m
-
-func _process(delta):
-	pass
-"
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_kpr3x"]
 
@@ -151,7 +189,7 @@ light_cull_mask = 4293918722
 sky_mode = 1
 
 [node name="Player" parent="." node_paths=PackedStringArray("camera") instance=ExtResource("1_7j1kp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.378581, 0.0551024, -13.7078)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.950927, 0.0551029, -4.02615)
 camera = NodePath("../Node3D/Camera3D")
 
 [node name="Kassan" parent="." instance=ExtResource("2_sy3b2")]
@@ -162,20 +200,37 @@ character = 13
 
 [node name="Sera" parent="." instance=ExtResource("2_sy3b2")]
 transform = Transform3D(0.730329, 0, -0.683095, 0, 1, 0, 0.683095, 0, 0.730329, -0.979249, 0.4, -3.80623)
+script = ExtResource("5_o8wuw")
+debug_adjust = false
+item_offset = Vector3(-0.018, 0.008, 0.1)
+item_rotation = Vector3(-60, 268.8, 0.2)
+animation = "Hold-guitar"
+lock_bone = "HandL"
 dialog_path = "res://dialogs/neko_concert.dialogue"
 dialog_entry = "sera"
 character = 14
 
+[node name="Item" type="MeshInstance3D" parent="Sera"]
+transform = Transform3D(0.931979, 0.0595604, 0.357587, -0.362496, 0.162812, 0.917655, -0.00356367, -0.984858, 0.173328, 0.00797391, 0.142325, -0.0604653)
+mesh = ExtResource("6_05cld")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("ShaderMaterial_bqoi8")
+surface_material_override/1 = SubResource("ShaderMaterial_2yhex")
+surface_material_override/2 = SubResource("ShaderMaterial_fphcx")
+
 [node name="Nanahira" parent="." instance=ExtResource("2_sy3b2")]
 transform = Transform3D(0.99951, 0, -0.0312886, 0, 1, 0, 0.0312886, 0, 0.99951, 0.0289532, 0.4, -3.69892)
-script = ExtResource("5_ibjt2")
-microphone_offset = Vector3(0, 0, 0)
-microphone_rotation = Vector3(-70, -10, 0)
+script = ExtResource("5_o8wuw")
+debug_adjust = false
+item_offset = Vector3(0, 0, 0)
+item_rotation = Vector3(-70, -10, 0)
+animation = "HoldR"
+lock_bone = "HandR"
 dialog_path = "res://dialogs/neko_concert.dialogue"
 dialog_entry = "nanahira"
 character = 15
 
-[node name="Microphone" type="MeshInstance3D" parent="Nanahira"]
+[node name="Item" type="MeshInstance3D" parent="Nanahira"]
 transform = Transform3D(0.999511, 0, 0.0312886, 0, 1, 0, -0.0312886, 0, 0.999511, 0.0221217, 0.140527, -0.0801356)
 mesh = ExtResource("5_ilkbb")
 skeleton = NodePath("../..")
@@ -183,7 +238,7 @@ surface_material_override/0 = SubResource("ShaderMaterial_otvg6")
 surface_material_override/1 = SubResource("ShaderMaterial_oglun")
 
 [node name="Node3D" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.900106, -4.76837e-07, -16.0112)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.38637, -4.76837e-07, -15.0631)
 
 [node name="Camera3D" type="Camera3D" parent="Node3D" node_paths=PackedStringArray("target", "kinematic_body")]
 transform = Transform3D(-1, 4.37114e-08, -7.57104e-08, 0, 0.866025, 0.5, 8.74228e-08, 0.5, -0.866025, -0.553924, 1.14857, -0.211639)
@@ -246,13 +301,13 @@ cone_scale = 1.5
 transform = Transform3D(-1, 2.68221e-07, 1.15463e-14, 0, -4.37114e-08, -1, -2.68221e-07, -1, 4.37114e-08, 3.728, 1.601, -5.006)
 mesh = SubResource("PlaneMesh_qvtgk")
 material = SubResource("ShaderMaterial_748fg")
-script = SubResource("GDScript_g545r")
+script = ExtResource("15_0f3xu")
 
 [node name="CSGMesh3D2" type="CSGMesh3D" parent="."]
 transform = Transform3D(-1, 2.68221e-07, 1.15463e-14, 0, -4.37114e-08, -1, -2.68221e-07, -1, 4.37114e-08, -3.72832, 1.60129, -5.00633)
 mesh = SubResource("PlaneMesh_qvtgk")
 material = SubResource("ShaderMaterial_748fg")
-script = SubResource("GDScript_g545r")
+script = ExtResource("15_0f3xu")
 
 [node name="Quickwarp" parent="." instance=ExtResource("11_j6tda")]
 transform = Transform3D(-0.999769, 0, 0.0214834, 0, 1, 0, -0.0214834, 0, -0.999769, -1.62445, -0.0024758, -18.1606)
