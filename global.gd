@@ -1,5 +1,7 @@
 extends Node
 
+const Player = preload("res://player.gd")
+
 # enums
 
 enum CartType
@@ -14,8 +16,15 @@ enum Collectible
 {
 	# must be strictly incrementing, since you can use Collectible.XYZ as index to `collectibles`
 	STAMP,
-	TAIYAKI
+	TAIYAKI,
+	BUGS,
+	PINEAPPLE,
+	DOUGH,
+	ENERGY,
 }
+
+var collected_dynamics = {}
+var collected_grids = {}
 
 # global state
 
@@ -26,15 +35,29 @@ func _process(delta):
 	pass
 
 func preprocess_bbcode(text: String) -> String:
-	return text.replace("[b]", "[color=#aa2a0e]").replace("[/b]", "[/color]")
+	return text.replace("[b]", "[color=#aa2a0e]").replace("[/b]", "[/color]").replace("\\n", "\n")
 
-var player: CharacterBody3D
+var player: Player
 var in_dialog: bool = false
+var block_player_ui: int = 0 # the same thing, but not auto-reset when dialogs are closing
+var in_ui: bool:
+	get:
+		assert(block_player_ui >= 0)
+		return in_dialog or block_player_ui > 0
 
 var collectibles: PackedInt32Array = [
 	0, # STAMP
 	0, # TAIYAKI
+	0, # BUGS
+	0, # PINEAPPLES
+	0, # DOUGH
+	0, # ENERGY
 ]
+
+func collect_animated(c: Collectible, n: int):
+	for i in range(0, n):
+		collectibles[c] += 1
+		await get_tree().create_timer(0.2).timeout
 
 var _completed_quests: Array[StringName]
 # StringName -> Quest
@@ -42,8 +65,8 @@ var _available_quests: Dictionary = {}
 var active_quests: Array[Quest]
 signal active_quests_changed
 
-var neko_hacker_available = OS.is_debug_build()
-var camellia_available = OS.is_debug_build()
+var neko_hacker_available = true
+var camellia_available = false
 
 # Set when interacting (opening dialog) with an NPC
 # Usable for `set current_npc.dialog_entry = ""` to set persistent NPC talking state
@@ -59,16 +82,25 @@ func register_quest(quest: Quest):
 func unregister_quest(quest: Quest):
 	_available_quests.erase(quest.quest_id)
 
+func try_start_quest(qid: StringName):
+	for i in range(0, active_quests.size()):
+		if active_quests[i].quest_id == qid:
+			return
+	start_quest(qid)
+
 func start_quest(qid: StringName):
 	var quest = _available_quests.get(qid)
 	assert(quest, "Quest " + qid + " not found!")
 	if quest:
 		active_quests.append(quest)
 		quest.start()
-		print("Starting quest " + qid + ": " + quest.description)
+		print("Starting quest " + qid + ": " + quest.get_text())
 		active_quests_changed.emit()
 
 func end_quest(qid: StringName):
+	assert(try_end_quest(qid), "Failed ending quest '" + qid + "', it wasn't started!")
+
+func try_end_quest(qid: StringName) -> bool:
 	for i in range(0, active_quests.size()):
 		if active_quests[i].quest_id == qid:
 			print("Ended quest " + qid)
@@ -78,7 +110,6 @@ func end_quest(qid: StringName):
 			active_quests.remove_at(i)
 			active_quests_changed.emit()
 			return true
-	assert(false, "Failed ending quest '" + qid + "', it wasn't started!")
 	return false
 
 func did_complete_quest(qid: StringName):
@@ -90,6 +121,12 @@ func in_quest(qid: StringName):
 			return true
 	return false
 
+func get_quest(qid: StringName):
+	for i in range(0, active_quests.size()):
+		if active_quests[i].quest_id == qid:
+			return active_quests[i]
+	return null
+
 func is_quest_complete(qid: StringName):
 	var quest = _available_quests.get(qid)
 	assert(quest, "Quest " + qid + " not found!")
@@ -98,11 +135,39 @@ func is_quest_complete(qid: StringName):
 	else:
 		return false
 
+func respawn_scene():
+	if neko_world:
+		# better performance
+		neko_world.reload()
+	elif camellia:
+		# better as well
+		camellia.respawn()
+	else:
+		get_tree().reload_current_scene()
+
 # per-island state
 
-var neko_world_reset_count = 0
+var neko_world = null
 
-func give_kassan_letter():
-	neko_world_reset_count += 1
-	print("Kassan has been given the letter %s times" % neko_world_reset_count)
-	get_tree().reload_current_scene()
+# camellia world
+
+var camellia = null
+var boosted: bool:
+	get:
+		return collectibles[Collectible.ENERGY] > 0
+
+var has_pizza = false
+var minihira_done = 0
+var max_drum_score = 0
+var kassan_step = 0
+var has_lighter = false
+
+func finish_game():
+	if dialog:
+		dialog.visible = false
+	await SceneSwitcher.switch_scene("res://islands/end_scene/end_scene.tscn")
+
+# func _unhandled_input(event):
+# 	if event is InputEventKey:
+# 		if event.pressed and event.keycode == KEY_F6:
+# 			finish_game()

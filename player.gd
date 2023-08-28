@@ -27,10 +27,18 @@ const FLIGHT_DRAG_HORIZONTAL = 0.01
 @onready var skeleton: Skeleton3D = model.get_node("Armature/Skeleton3D")
 @onready var root_bone: int = skeleton.find_bone("Root")
 
+var oob_height: float = -20
+
 func _ready():
 	Global.player = self
 
-var flight_strokes_max = 3
+func _enter_tree():
+	await get_tree().process_frame
+	var oobnode = get_tree().current_scene.get_node_or_null("OOBHeight")
+	if oobnode:
+		oob_height = oobnode.global_position.y
+
+var flight_strokes_max = 2
 var flight_strokes = flight_strokes_max
 var flight_stroke_timer_first = 0.2
 var flight_stroke_timer_max = 0.3
@@ -69,8 +77,16 @@ func _visualize_flight(delta, is_flying):
 	#skeleton.set_bone_pose_rotation(root_bone, targetPose)
 	model.set_flight(is_flying)
 
+func reset():
+	state = IDLE
+	model.set_velocity(Vector3.ZERO)
+	model.set_flight(false)
+
 func _physics_process(delta):
-	RenderingServer.global_shader_parameter_set("player_world_position", global_position)
+	var gpos = global_position
+	RenderingServer.global_shader_parameter_set("player_world_position", gpos)
+	if gpos.y < oob_height:
+		animate_oob()
 
 	sneak = Input.is_action_pressed("sneak")
 	jump_held = Input.is_action_pressed("jump")
@@ -97,42 +113,50 @@ func _physics_process(delta):
 		var target_rotation = Basis(Vector3(0, 1, 0), -atan2(velocity2d.x, -velocity2d.y))
 		global_transform.basis = global_transform.basis.slerp(target_rotation, ROTATION_SPEED * delta)
 
-	if move_and_slide() and on_floor:
-		if is_stair_stepping:
+	if move_and_slide():
+		if Global.neko_world:
 			for i in range(0, get_slide_collision_count()):
 				var collision = get_slide_collision(i)
-				if collision.get_normal().y > 0.9:
-					is_stair_stepping = false
+				var collider = collision.get_collider()
+				if collider.has_method("is_in_group") and collider.is_in_group("glitch"):
+					Global.neko_world.glitch_death()
+
+		if on_floor:
+			if is_stair_stepping:
+				for i in range(0, get_slide_collision_count()):
+					var collision = get_slide_collision(i)
+					if collision.get_normal().y > 0.9:
+						is_stair_stepping = false
+						break
+			else:
+				for i in range(0, get_slide_collision_count()):
+					var collision = get_slide_collision(i)
+					var normal = collision.get_normal()
+
+					var dir = Vector2(normal.x, normal.z).normalized()
+					var walk_dir = velocity2d.normalized()
+
+					var is_wall_collision = abs(normal.y) < 0.7
+					var is_walking_against_wall = abs(dir.dot(walk_dir)) > 0.5
+					if not is_wall_collision or not is_walking_against_wall:
+						continue
+
+					var start = global_position + Vector3(0, MAX_STEP_HEIGHT, 0) - Vector3(dir.x, 0, dir.y) * $CollisionShape3D.shape.radius
+					var end = start - Vector3(dir.x, 0, dir.y) * MIN_STEP_WIDTH
+					var height_end = end + Vector3(0, $CollisionShape3D.shape.height + 0.1, 0)
+					var space_state = get_world_3d().direct_space_state
+					var is_foot_blocked = space_state.intersect_ray(PhysicsRayQueryParameters3D.create(start, end))
+					var is_standing_blocked = space_state.intersect_ray(PhysicsRayQueryParameters3D.create(end, height_end))
+					if is_foot_blocked or is_standing_blocked:
+						continue
+
+					velocity.y += STEP_UP_FORCE
+					is_stair_stepping = true
 					break
-		else:
-			for i in range(0, get_slide_collision_count()):
-				var collision = get_slide_collision(i)
-				var normal = collision.get_normal()
-
-				var dir = Vector2(normal.x, normal.z).normalized()
-				var walk_dir = velocity2d.normalized()
-
-				var is_wall_collision = abs(normal.y) < 0.7
-				var is_walking_against_wall = abs(dir.dot(walk_dir)) > 0.5
-				if not is_wall_collision or not is_walking_against_wall:
-					continue
-
-				var start = global_position + Vector3(0, MAX_STEP_HEIGHT, 0) - Vector3(dir.x, 0, dir.y) * $CollisionShape3D.shape.radius
-				var end = start - Vector3(dir.x, 0, dir.y) * MIN_STEP_WIDTH
-				var height_end = end + Vector3(0, $CollisionShape3D.shape.height + 0.1, 0)
-				var space_state = get_world_3d().direct_space_state
-				var is_foot_blocked = space_state.intersect_ray(PhysicsRayQueryParameters3D.create(start, end))
-				var is_standing_blocked = space_state.intersect_ray(PhysicsRayQueryParameters3D.create(end, height_end))
-				if is_foot_blocked or is_standing_blocked:
-					continue
-
-				velocity.y += STEP_UP_FORCE
-				is_stair_stepping = true
-				break
 
 
 func idle(delta):
-	if Global.in_dialog:
+	if Global.in_ui:
 		state = TALKING
 		talk(delta)
 		return
@@ -158,7 +182,7 @@ func idle(delta):
 
 
 func walk(delta):
-	if Global.in_dialog:
+	if Global.in_ui:
 		state = TALKING
 		talk(delta)
 		return
@@ -235,7 +259,7 @@ func fly(delta, first_frame: bool):
 
 
 func talk(delta):
-	if not Global.in_dialog:
+	if not Global.in_ui:
 		state = IDLE
 		idle(delta)
 		return
@@ -246,4 +270,14 @@ func talk(delta):
 	# Ideally, we should make the character turn to face the npc
 	# being talked to here
 
+var _animating_oob = false
+func animate_oob():
+	if _animating_oob:
+		return
+	_animating_oob = true
+	SFX.play(preload("res://sfx/falldown.wav"))
+	await SceneSwitcher.fade_to_black()
+	await Global.respawn_scene()
+	await SceneSwitcher.unfade_from_black(0.5)
+	_animating_oob = false
 

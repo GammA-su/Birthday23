@@ -13,6 +13,9 @@ extends Node
 ## Can be used in the UI.
 @export var done: bool = false
 
+## Automatically give out these quests when done (before ending)
+@export var auto_next_quest: Array[StringName]
+
 signal updated
 signal started
 signal finished
@@ -27,8 +30,12 @@ func _ended():
 	pass
 
 func _finished():
+	if done:
+		return
 	done = true
 	updated.emit()
+	for q in auto_next_quest:
+		Global.start_quest(q)
 
 ## Must be called when the quest gets added to the quests array
 func start():
@@ -50,7 +57,7 @@ func _start_node(node):
 		node.visible = true
 
 func get_text():
-	return description
+	return tr(description)
 
 ## Must be called before the quest gets removed from the quests array
 func end():
